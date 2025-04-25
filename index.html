@@ -148,6 +148,8 @@
             font-weight: 600;
             cursor: pointer;
             transition: background-color 0.3s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .btn-primary {
@@ -221,8 +223,6 @@
             font-weight: 600;
         }
 
-
-
         .loading {
             display: none;
             text-align: center;
@@ -256,10 +256,28 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 0.9em;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .btn-delete:hover {
             background-color: #c0392b;
+        }
+
+        input, select, button {
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="date"] {
+            min-height: 44px;
+        }
+
+        select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23333' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 12px;
         }
 
         .notification {
@@ -286,6 +304,122 @@
         .notification.show {
             opacity: 1;
         }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 15px;
+                border-radius: 10px;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .dashboard {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .forms-container {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .charts-section {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .chart-container {
+                min-height: 300px;
+                padding: 15px;
+            }
+
+            .chart-container canvas {
+                height: 250px !important;
+            }
+
+            .table-container {
+                padding: 15px;
+                overflow-x: auto;
+            }
+
+            table {
+                font-size: 0.9em;
+            }
+
+            th, td {
+                padding: 10px 8px;
+            }
+
+            .btn {
+                padding: 12px;
+            }
+
+            .btn-delete {
+                padding: 4px 8px;
+                font-size: 0.8em;
+            }
+
+            .notification {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                padding: 10px 15px;
+                font-size: 0.9em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.5em;
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .header h1 svg {
+                width: 30px;
+                height: 30px;
+            }
+
+            .dashboard-card {
+                padding: 15px;
+            }
+
+            .dashboard-card .value {
+                font-size: 1.5em;
+            }
+
+            .form-card {
+                padding: 20px;
+            }
+
+            table {
+                font-size: 0.8em;
+            }
+
+            th, td {
+                padding: 8px 5px;
+            }
+
+            .table-container {
+                width: 100%;
+                position: relative;
+            }
+
+            .table-container table {
+                min-width: 600px;
+            }
+
+            /* Remover algumas colunas para melhor visualização mobile */
+            .hide-mobile {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -298,8 +432,7 @@
                 </svg>
                 Controle de Gastos - Açude de Peixes
             </h1>
-            
-            <p>Sistema criando por Andeilsson Amaral</p>
+            <p>Sistema avançado com integração ao Google Sheets</p>
         </div>
 
         <div class="dashboard">
@@ -398,7 +531,7 @@
                     <tr>
                         <th>Data</th>
                         <th>Tipo</th>
-                        <th>Categoria</th>
+                        <th class="hide-mobile">Categoria</th>
                         <th>Descrição</th>
                         <th>Valor</th>
                         <th>Ações</th>
@@ -478,8 +611,8 @@
 
     <script>
         // CONFIGURE AQUI A URL DO SEU GOOGLE SHEETS WEB APP
-        const sheetURL = 'https://script.google.com/macros/s/AKfycbyRchiwy6Cxe4X2n0CmyQtI59NGkanhW7ZuFfhlC2H9jqn95WSSxqRBb2xeCyhmylfc/exec';
-        let chart;
+        const sheetURL = 'https://script.google.com/macros/s/AKfycbzoG8rk0eaMRF8NTGT7044wYafR_qWUtlfPKGQicKWHZ03KRKstJBZXuovFlvDmKWocBQ/exec';
+        let chart, barChart, lineChart;
 
         document.getElementById('dataEntrada').valueAsDate = new Date();
         document.getElementById('dataSaida').valueAsDate = new Date();
@@ -516,8 +649,6 @@
             salvarNoSheets(dados);
         });
 
-
-
         function salvarNoSheets(dados) {
             if (!sheetURL) {
                 showNotification('Configure a URL do Google Sheets primeiro!', 'error');
@@ -546,7 +677,7 @@
                 // Recarregar todos os dados da planilha
                 setTimeout(() => {
                     carregarDados();
-                }, 1500); // Pequeno delay para garantir que a planilha foi atualizada
+                }, 1500);
             }).catch(error => {
                 mostrarLoading(false);
                 showNotification('Erro ao salvar dados!', 'error');
@@ -566,21 +697,33 @@
                     tbody.innerHTML = '';
                     
                     if (result.data && result.data.length > 1) {
-                        // Skip header row
+                        // Skip header row and sort by date (most recent first)
+                        const registros = [];
                         for (let i = 1; i < result.data.length; i++) {
                             const row = result.data[i];
                             if (row.length >= 5) {
-                                const dados = {
+                                registros.push({
                                     data: row[0],
                                     tipo: row[1],
                                     categoria: row[2],
                                     descricao: row[3],
                                     valor: parseFloat(row[4]),
-                                    id: row[5] || i // use timestamp ID if available
-                                };
-                                adicionarRegistroNaTabela(dados);
+                                    id: row[5] || i
+                                });
                             }
                         }
+                        
+                        // Sort by date (newest first)
+                        registros.sort((a, b) => {
+                            const dataA = new Date(a.data.split('/').reverse().join('-'));
+                            const dataB = new Date(b.data.split('/').reverse().join('-'));
+                            return dataB - dataA;
+                        });
+                        
+                        // Add all records to table
+                        registros.forEach(dados => {
+                            adicionarRegistroNaTabela(dados);
+                        });
                     }
                     
                     atualizarDashboard();
@@ -589,6 +732,7 @@
                 .catch(error => {
                     mostrarLoading(false);
                     console.error('Erro ao carregar dados:', error);
+                    showNotification('Erro ao carregar dados!', 'error');
                 });
         }
 
@@ -625,7 +769,7 @@
             tr.innerHTML = `
                 <td>${formatarData(dados.data)}</td>
                 <td>${dados.tipo}</td>
-                <td>${dados.categoria}</td>
+                <td class="hide-mobile">${dados.categoria}</td>
                 <td>${dados.descricao}</td>
                 <td style="color: ${dados.tipo === 'Entrada' ? '#27ae60' : '#e74c3c'}">
                     ${dados.tipo === 'Entrada' ? '+' : '-'} R$ ${dados.valor.toFixed(2)}
