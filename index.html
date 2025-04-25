@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Gastos - Açude de Peixes</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .dashboard-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .dashboard-card h3 {
+            color: #7f8c8d;
+            font-size: 1em;
+            margin-bottom: 10px;
+        }
+
+        .dashboard-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .dashboard-card.entrada .value {
+            color: #27ae60;
+        }
+
+        .dashboard-card.saida .value {
+            color: #e74c3c;
+        }
+
+        .dashboard-card.saldo .value {
+            color: #3498db;
+        }
+
+        .forms-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .form-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .form-card h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-success {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #219a52;
+        }
+
+        .charts-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 0;
+            min-height: 400px;
+        }
+
+        .chart-container canvas {
+            width: 100% !important;
+            height: 300px !important;
+        }
+
+        .chart-container h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            text-align: center;
+        }
+
+        .table-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .btn-delete {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .btn-delete:hover {
+            background-color: #c0392b;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+        }
+
+        .notification.success {
+            background-color: #27ae60;
+        }
+
+        .notification.error {
+            background-color: #e74c3c;
+        }
+
+        .notification.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2">
+                    <path d="M12 2c-3.5 0-6.5 1.5-9 4s-4 5.5-4 9c0 7 9 9 9 9s9-2 9-9c0-3.5-1.5-6.5-4-9s-5.5-4-9-4z"/>
+                    <path d="M12 8c-2 0-3 1-3 2.5S10 13 12 13s3-1 3-2.5S14 8 12 8z"/>
+                </svg>
+                Controle de Gastos - Açude de Peixes
+            </h1>
+            
+            <p>Sistema criando por Andeilsson Amaral</p>
+        </div>
+
+        <div class="dashboard">
+            <div class="dashboard-card entrada">
+                <h3>Total de Entradas</h3>
+                <div class="value" id="totalEntradas">R$ 0,00</div>
+                <small>Este mês</small>
+            </div>
+            <div class="dashboard-card saida">
+                <h3>Total de Saídas</h3>
+                <div class="value" id="totalSaidas">R$ 0,00</div>
+                <small>Este mês</small>
+            </div>
+            <div class="dashboard-card saldo">
+                <h3>Saldo</h3>
+                <div class="value" id="saldo">R$ 0,00</div>
+                <small>Resultado do mês</small>
+            </div>
+        </div>
+
+        <div class="forms-container">
+            <div class="form-card">
+                <h2>Registrar Entrada</h2>
+                <form id="entradaForm">
+                    <div class="form-group">
+                        <label for="dataEntrada">Data</label>
+                        <input type="date" id="dataEntrada" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="descricaoEntrada">Descrição</label>
+                        <input type="text" id="descricaoEntrada" placeholder="Ex: Venda de peixes" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="valorEntrada">Valor (R$)</label>
+                        <input type="number" id="valorEntrada" step="0.01" placeholder="0,00" required>
+                    </div>
+                    <button type="submit" class="btn btn-success">Registrar Entrada</button>
+                </form>
+            </div>
+
+            <div class="form-card">
+                <h2>Registrar Saída</h2>
+                <form id="saidaForm">
+                    <div class="form-group">
+                        <label for="dataSaida">Data</label>
+                        <input type="date" id="dataSaida" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tipoGasto">Tipo de Gasto</label>
+                        <select id="tipoGasto" required>
+                            <option value="">Selecione...</option>
+                            <option value="Ração para Peixes">Ração para Peixes</option>
+                            <option value="Alevinos">Alevinos</option>
+                            <option value="Manutenção do Açude">Manutenção do Açude</option>
+                            <option value="Equipamentos">Equipamentos</option>
+                            <option value="Medicamentos">Medicamentos</option>
+                            <option value="Energia Elétrica">Energia Elétrica</option>
+                            <option value="Mão de Obra">Mão de Obra</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="descricaoSaida">Descrição</label>
+                        <input type="text" id="descricaoSaida" placeholder="Ex: Compra de ração premium" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="valorSaida">Valor (R$)</label>
+                        <input type="number" id="valorSaida" step="0.01" placeholder="0,00" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Registrar Saída</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="charts-section">
+            <div class="chart-container">
+                <h2>Distribuição de Gastos</h2>
+                <canvas id="gastosChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h2>Comparativo Entradas x Saídas</h2>
+                <canvas id="barChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h2>Evolução do Saldo</h2>
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <h2>Últimos Registros</h2>
+            <table id="registrosTable">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Tipo</th>
+                        <th>Categoria</th>
+                        <th>Descrição</th>
+                        <th>Valor</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Registros serão inseridos aqui -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 
+        INSTRUÇÕES DE CONFIGURAÇÃO DO GOOGLE SHEETS
+        
+        1. Crie uma nova planilha no Google Sheets
+        2. Vá em "Extensões" → "Apps Script"
+        3. Cole o seguinte código no editor:
+
+        function doPost(e) {
+          var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+          var data = JSON.parse(e.postData.contents);
+          
+          if (data.action === 'add') {
+            var row = [
+              data.data,
+              data.tipo,
+              data.categoria,
+              data.descricao,
+              data.valor,
+              new Date().getTime() // timestamp for unique ID
+            ];
+            
+            sheet.appendRow(row);
+            
+            return ContentService.createTextOutput(JSON.stringify({
+              'result': 'success',
+              'row': row
+            })).setMimeType(ContentService.MimeType.JSON);
+          } 
+          else if (data.action === 'delete') {
+            var values = sheet.getDataRange().getValues();
+            for (var i = values.length - 1; i >= 0; i--) {
+              if (values[i][5] == data.id) { // column F is timestamp/ID
+                sheet.deleteRow(i + 1);
+                return ContentService.createTextOutput(JSON.stringify({
+                  'result': 'success',
+                  'deleted': true
+                })).setMimeType(ContentService.MimeType.JSON);
+              }
+            }
+          }
+        }
+
+        function doGet(e) {
+          var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+          var data = sheet.getDataRange().getValues();
+          
+          return ContentService.createTextOutput(JSON.stringify({
+            'result': 'success',
+            'data': data
+          })).setMimeType(ContentService.MimeType.JSON);
+        }
+        
+        4. Clique em "Implantar" → "Nova implantação"
+        5. Selecione "Aplicativo da Web" e configure:
+           - Execute como: "Eu"
+           - Quem tem acesso: "Qualquer pessoa"
+        6. Copie a URL do Web App e cole na variável sheetURL abaixo
+        -->
+    </div>
+
+    <div class="notification" id="notification"></div>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Salvando dados...</p>
+    </div>
+
+    <script>
+        // CONFIGURE AQUI A URL DO SEU GOOGLE SHEETS WEB APP
+        const sheetURL = 'https://script.google.com/macros/s/AKfycbyRchiwy6Cxe4X2n0CmyQtI59NGkanhW7ZuFfhlC2H9jqn95WSSxqRBb2xeCyhmylfc/exec';
+        let chart;
+
+        document.getElementById('dataEntrada').valueAsDate = new Date();
+        document.getElementById('dataSaida').valueAsDate = new Date();
+
+        if (sheetURL) {
+            carregarDados();
+        }
+
+        document.getElementById('entradaForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const dados = {
+                data: document.getElementById('dataEntrada').value,
+                tipo: 'Entrada',
+                categoria: 'Receita',
+                descricao: document.getElementById('descricaoEntrada').value,
+                valor: parseFloat(document.getElementById('valorEntrada').value)
+            };
+            
+            salvarNoSheets(dados);
+        });
+
+        document.getElementById('saidaForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const dados = {
+                data: document.getElementById('dataSaida').value,
+                tipo: 'Saída',
+                categoria: document.getElementById('tipoGasto').value,
+                descricao: document.getElementById('descricaoSaida').value,
+                valor: parseFloat(document.getElementById('valorSaida').value)
+            };
+            
+            salvarNoSheets(dados);
+        });
+
+
+
+        function salvarNoSheets(dados) {
+            if (!sheetURL) {
+                showNotification('Configure a URL do Google Sheets primeiro!', 'error');
+                return;
+            }
+
+            mostrarLoading(true);
+
+            const dadosParaEnviar = {
+                ...dados,
+                action: 'add'
+            };
+
+            fetch(sheetURL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify(dadosParaEnviar)
+            }).then(() => {
+                mostrarLoading(false);
+                showNotification('Dados salvos com sucesso!', 'success');
+                document.getElementById('entradaForm').reset();
+                document.getElementById('saidaForm').reset();
+                document.getElementById('dataEntrada').valueAsDate = new Date();
+                document.getElementById('dataSaida').valueAsDate = new Date();
+                
+                // Recarregar todos os dados da planilha
+                setTimeout(() => {
+                    carregarDados();
+                }, 1500); // Pequeno delay para garantir que a planilha foi atualizada
+            }).catch(error => {
+                mostrarLoading(false);
+                showNotification('Erro ao salvar dados!', 'error');
+                console.error('Erro:', error);
+            });
+        }
+
+        function carregarDados() {
+            if (!sheetURL) return;
+            
+            mostrarLoading(true);
+            fetch(sheetURL)
+                .then(response => response.json())
+                .then(result => {
+                    mostrarLoading(false);
+                    const tbody = document.querySelector('#registrosTable tbody');
+                    tbody.innerHTML = '';
+                    
+                    if (result.data && result.data.length > 1) {
+                        // Skip header row
+                        for (let i = 1; i < result.data.length; i++) {
+                            const row = result.data[i];
+                            if (row.length >= 5) {
+                                const dados = {
+                                    data: row[0],
+                                    tipo: row[1],
+                                    categoria: row[2],
+                                    descricao: row[3],
+                                    valor: parseFloat(row[4]),
+                                    id: row[5] || i // use timestamp ID if available
+                                };
+                                adicionarRegistroNaTabela(dados);
+                            }
+                        }
+                    }
+                    
+                    atualizarDashboard();
+                    atualizarGrafico();
+                })
+                .catch(error => {
+                    mostrarLoading(false);
+                    console.error('Erro ao carregar dados:', error);
+                });
+        }
+
+        function excluirRegistro(id, linha) {
+            if (confirm('Tem certeza que deseja excluir este registro?')) {
+                mostrarLoading(true);
+                
+                fetch(sheetURL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({
+                        action: 'delete',
+                        id: id
+                    })
+                }).then(() => {
+                    mostrarLoading(false);
+                    showNotification('Registro excluído com sucesso!', 'success');
+                    linha.remove();
+                    atualizarDashboard();
+                    atualizarGrafico();
+                }).catch(error => {
+                    mostrarLoading(false);
+                    showNotification('Erro ao excluir registro!', 'error');
+                    console.error('Erro:', error);
+                });
+            }
+        }
+
+        function adicionarRegistroNaTabela(dados) {
+            const tbody = document.querySelector('#registrosTable tbody');
+            const tr = document.createElement('tr');
+            const id = dados.id || new Date().getTime();
+            
+            tr.innerHTML = `
+                <td>${formatarData(dados.data)}</td>
+                <td>${dados.tipo}</td>
+                <td>${dados.categoria}</td>
+                <td>${dados.descricao}</td>
+                <td style="color: ${dados.tipo === 'Entrada' ? '#27ae60' : '#e74c3c'}">
+                    ${dados.tipo === 'Entrada' ? '+' : '-'} R$ ${dados.valor.toFixed(2)}
+                </td>
+                <td>
+                    <button class="btn-delete" onclick="excluirRegistro(${id}, this.closest('tr'))">
+                        Excluir
+                    </button>
+                </td>
+            `;
+            
+            tbody.insertBefore(tr, tbody.firstChild);
+        }
+
+        function atualizarDashboard() {
+            const tabela = document.querySelector('#registrosTable tbody');
+            const linhas = tabela.querySelectorAll('tr');
+            let totalEntradas = 0;
+            let totalSaidas = 0;
+
+            linhas.forEach(linha => {
+                const tipo = linha.cells[1].textContent;
+                const valorTexto = linha.cells[4].textContent;
+                const valor = parseFloat(valorTexto.replace(/[^\d.,]/g, '').replace(',', '.'));
+
+                if (tipo === 'Entrada') {
+                    totalEntradas += valor;
+                } else {
+                    totalSaidas += valor;
+                }
+            });
+
+            document.getElementById('totalEntradas').textContent = `R$ ${totalEntradas.toFixed(2)}`;
+            document.getElementById('totalSaidas').textContent = `R$ ${totalSaidas.toFixed(2)}`;
+            document.getElementById('saldo').textContent = `R$ ${(totalEntradas - totalSaidas).toFixed(2)}`;
+        }
+
+        function atualizarGrafico() {
+            const tabela = document.querySelector('#registrosTable tbody');
+            const linhas = Array.from(tabela.querySelectorAll('tr'));
+            const categorias = {};
+            const meses = {};
+            const evolucaoSaldo = [];
+            let saldoAcumulado = 0;
+
+            // Ordena as linhas por data para cálculo correto do saldo
+            const linhasOrdenadas = linhas.sort((a, b) => {
+                const dataA = a.cells[0].textContent.split('/').reverse().join('-');
+                const dataB = b.cells[0].textContent.split('/').reverse().join('-');
+                return new Date(dataA) - new Date(dataB);
+            });
+
+            // Processando dados para todos os gráficos
+            linhasOrdenadas.forEach(linha => {
+                const data = linha.cells[0].textContent;
+                const tipo = linha.cells[1].textContent;
+                const categoria = linha.cells[2].textContent;
+                const valorTexto = linha.cells[4].textContent;
+                const valor = parseFloat(valorTexto.replace(/[^\d.,]/g, '').replace(',', '.'));
+
+                // Dados para gráfico de pizza (distribuição de gastos)
+                if (tipo === 'Saída') {
+                    categorias[categoria] = (categorias[categoria] || 0) + valor;
+                }
+
+                // Dados para gráfico de barras (entradas vs saídas por mês)
+                const [dia, mes, ano] = data.split('/');
+                const chaveData = `${mes}/${ano}`;
+                if (!meses[chaveData]) {
+                    meses[chaveData] = { entradas: 0, saidas: 0 };
+                }
+                if (tipo === 'Entrada') {
+                    meses[chaveData].entradas += valor;
+                } else {
+                    meses[chaveData].saidas += valor;
+                }
+
+                // Dados para gráfico de linha (evolução do saldo)
+                saldoAcumulado += tipo === 'Entrada' ? valor : -valor;
+                evolucaoSaldo.push({ data: data, saldo: saldoAcumulado });
+            });
+
+            // Gráfico de Pizza - Distribuição de Gastos
+            if (chart) chart.destroy();
+            const ctxPizza = document.getElementById('gastosChart').getContext('2d');
+            chart = new Chart(ctxPizza, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(categorias),
+                    datasets: [{
+                        label: 'Gastos por Categoria',
+                        data: Object.values(categorias),
+                        backgroundColor: [
+                            '#3498db', '#e74c3c', '#2ecc71', '#f39c12', 
+                            '#9b59b6', '#1abc9c', '#34495e', '#95a5a6'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    return `${label}: R$ ${value.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Gráfico de Barras - Entradas vs Saídas
+            if (barChart) barChart.destroy();
+            const ctxBar = document.getElementById('barChart').getContext('2d');
+            barChart = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(meses),
+                    datasets: [
+                        {
+                            label: 'Entradas',
+                            data: Object.values(meses).map(m => m.entradas),
+                            backgroundColor: '#27ae60',
+                            borderWidth: 0
+                        },
+                        {
+                            label: 'Saídas',
+                            data: Object.values(meses).map(m => m.saidas),
+                            backgroundColor: '#e74c3c',
+                            borderWidth: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'R$ ' + value.toFixed(2);
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = context.raw || 0;
+                                    return `${label}: R$ ${value.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Gráfico de Linha - Evolução do Saldo
+            if (lineChart) lineChart.destroy();
+            const ctxLine = document.getElementById('lineChart').getContext('2d');
+            lineChart = new Chart(ctxLine, {
+                type: 'line',
+                data: {
+                    labels: evolucaoSaldo.map(e => e.data),
+                    datasets: [{
+                        label: 'Saldo',
+                        data: evolucaoSaldo.map(e => e.saldo),
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'R$ ' + value.toFixed(2);
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw || 0;
+                                    return `Saldo: R$ ${value.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function formatarData(data) {
+            const [ano, mes, dia] = data.split('-');
+            return `${dia}/${mes}/${ano}`;
+        }
+
+        function mostrarLoading(show) {
+            document.getElementById('loading').classList.toggle('active', show);
+        }
+
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
